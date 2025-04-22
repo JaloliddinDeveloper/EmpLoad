@@ -23,15 +23,6 @@ namespace EmpLoad.Brokers.Storages
             optionsBuilder.UseSqlServer(connectionString);
         }
 
-        private async ValueTask<T> InsertAsync<T>(T @object)
-        {
-            this.Entry(@object).State = EntityState.Added;
-            await this.SaveChangesAsync();
-            DetachEntity(@object);
-
-            return @object;
-        }
-
         private async ValueTask<IQueryable<T>> SelectAllAsync<T>() where T : class =>
             this.Set<T>();
 
