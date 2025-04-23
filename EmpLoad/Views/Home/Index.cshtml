@@ -77,6 +77,10 @@
                                 data-startdate="@e.StartDate.ToString("yyyy-MM-dd")">
                             Edit
                         </button>
+                        <form asp-action="Delete" asp-controller="Home" method="post" class="d-inline">
+                            <input type="hidden" name="employeeId" value="@e.Id" />
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this employee?');">Delete</button>
+                        </form>
                     </td>
                 </tr>
             }
