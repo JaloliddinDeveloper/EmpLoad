@@ -1,6 +1,5 @@
 ﻿using CsvHelper.Configuration;
 using CsvHelper;
-using EmpLoad.Brokers.Storages;
 using EmpLoad.Models.Foundations.Employees;
 using Microsoft.AspNetCore.Mvc;
 using System.Globalization;
@@ -9,22 +8,24 @@ using Microsoft.AspNetCore.Http;
 using System.Linq;
 using System.Threading.Tasks;
 using EmpLoad.Services.Foundations.EmployeeMaps;
+using EmpLoad.Services.Foundations.Employees;
+using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace EmpLoad.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IStorageBroker storageBroker;
+        private readonly IEmployeeServce employeeServce;
 
-        public HomeController(IStorageBroker storageBroker)
-        {
-            this.storageBroker = storageBroker;
-        }
+        public HomeController(IEmployeeServce employeeServce)=>
+            this.employeeServce = employeeServce;
 
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var employees = await this.storageBroker
-                .SelectAllEmployeesAsync();
+            var employees = await this.employeeServce
+                .RetrieveAllEmployeesAsync();
 
             return View(employees.OrderBy(e => e.Surname).ToList());
         }
@@ -42,11 +43,11 @@ namespace EmpLoad.Controllers
                 csv.Context.RegisterClassMap<EmployeeMap>();
 
                 var records = csv.GetRecords<Employee>().ToList();
-                await this.storageBroker.InsertEmployeesAsync(records);
+                await this.employeeServce.AddEmployeesAsync(records);
                 ViewBag.Message = $"{records.Count} rows successfully imported.";
             }
 
-            var employees = await this.storageBroker.SelectAllEmployeesAsync();
+            var employees = await this.employeeServce.RetrieveAllEmployeesAsync();
             return View("Index", employees.OrderBy(e => e.Surname).ToList());
         }
 
@@ -55,7 +56,7 @@ namespace EmpLoad.Controllers
         {
             if (ModelState.IsValid)
             {
-                var existing = await this.storageBroker.SelectEmployeeByIdAsync(employee.Id);
+                var existing = await this.employeeServce.RetrieveEmployeeByIdAsync(employee.Id);
                 if (existing != null)
                 {
                     existing.PayrollNumber = employee.PayrollNumber;
@@ -70,10 +71,21 @@ namespace EmpLoad.Controllers
                     existing.EmailHome = employee.EmailHome;
                     existing.StartDate = employee.StartDate;
 
-                    await this.storageBroker.UpdateEmployeeAsync(existing);
+                    await this.employeeServce.ModifyEmployeeAsync(existing);
                     ViewBag.Message = "Employee updated successfully.";
                 }
             }
+
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        public async ValueTask<IActionResult> Delete(int employeeId)
+        {
+            var employee = await employeeServce.RemoveEmployeeByIdAsync(employeeId);
+            TempData["Message"] = employee != null
+                ? "Employee deleted successfully."
+                : "Employee not found.";
 
             return RedirectToAction("Index");
         }
